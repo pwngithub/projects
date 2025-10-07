@@ -11,26 +11,37 @@ st.set_page_config(
 )
 
 # --- Custom Styling (CSS Injection) ---
-# This injects CSS to customize the app's appearance for a more professional look.
+# This injects CSS to customize the app's appearance for a more professional and readable look.
 st.markdown("""
 <style>
-    /* Main app background color */
+    /* Main app background color - changed to clean white */
     .stApp {
-        background-color: #F0F2F6;
+        background-color: #FFFFFF;
     }
-    /* Sidebar styling */
+    /* Sidebar styling - kept dark for contrast */
     [data-testid="stSidebar"] {
-        background-color: #1a202c; /* A dark, modern sidebar color */
+        background-color: #1a202c; 
     }
-    /* Style for metric labels */
+    /* Style for metric labels - darker for better contrast */
     .stMetric .st-ax {
-        color: #5A6474;
+        color: #262730;
+    }
+    /* Style for metric values */
+    [data-testid="stMetricValue"] {
+        color: #1a202c;
     }
     /* Custom horizontal rule */
     hr {
         margin-top: 1rem;
         margin-bottom: 1rem;
         border-top: 1px solid #E2E8F0;
+    }
+    /* Styling for the KPI containers to make them look like cards */
+    .st-emotion-cache-z5fcl4 {
+        border: 1px solid #E2E8F0;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -111,7 +122,7 @@ if dataframe is not None:
 
         st.sidebar.header("Filter Options")
         all_types = kpi_data['Type'].unique()
-        selected_types = st.sidebar.multiselect(
+        selected_types = st.sidebar.multelect(
             "Select Project Type(s):",
             options=all_types,
             default=all_types
@@ -121,14 +132,15 @@ if dataframe is not None:
 
         # --- High-Level KPIs ---
         st.header("📊 Overall Project Health")
-        total_design = filtered_kpi_data['Design'].sum()
-        total_as_built = filtered_kpi_data['As Built'].sum()
-        overall_completion = (total_as_built / total_design * 100) if total_design > 0 else 0
-        
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Total Design Scope", f"{total_design:,.0f}")
-        col2.metric("Total As Built", f"{total_as_built:,.0f}")
-        col3.metric("Overall Completion", f"{overall_completion:.2f}%")
+        with st.container():
+            total_design = filtered_kpi_data['Design'].sum()
+            total_as_built = filtered_kpi_data['As Built'].sum()
+            overall_completion = (total_as_built / total_design * 100) if total_design > 0 else 0
+            
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Total Design Scope", f"{total_design:,.0f}")
+            col2.metric("Total As Built", f"{total_as_built:,.0f}")
+            col3.metric("Overall Completion", f"{overall_completion:.2f}%")
 
         # --- Detailed KPI Section ---
         st.header("🏗️ Completion by Project Type")
@@ -147,7 +159,6 @@ if dataframe is not None:
                     kpi_col1.metric("Completion", f"{row['Completion %']:.2f}%")
                     kpi_col2.metric("As Built", f"{row['As Built']:,.2f}")
                     kpi_col3.metric("Design Target", f"{row['Design']:,.2f}")
-                    st.markdown("<hr>", unsafe_allow_html=True)
         else:
             st.info("No data to display for the selected project types.")
 
