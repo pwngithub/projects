@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import altair as alt
 from datetime import datetime
 
 # --- Page Configuration ---
@@ -106,41 +105,6 @@ if dataframe is not None:
         col2.metric("Total As Built", f"{total_as_built:,.0f}")
         col3.metric("Left to be Built", f"{total_left:,.0f}")
         col4.metric("Overall Completion", f"{overall_completion:.2f}%")
-
-        # --- Detailed KPI Section ---
-        st.header("🏗️ Completion by Project Type")
-        
-        # --- Comparative Bar Chart ---
-        if not filtered_kpi_data.empty:
-            
-            # Re-structure data for Altair chart
-            chart_data = filtered_kpi_data.melt(
-                id_vars='Type', 
-                value_vars=['Design', 'As Built'], 
-                var_name='Category', 
-                value_name='Value'
-            )
-            
-            chart = alt.Chart(chart_data).mark_bar().encode(
-                x=alt.X('Value:Q', title='Amount'),
-                y=alt.Y('Type:N', sort='-x', title='Project Type'),
-                color='Category:N',
-                tooltip=['Type', 'Category', 'Value']
-            ).properties(
-                title='Design vs. As Built Comparison'
-            )
-            st.altair_chart(chart, use_container_width=True)
-
-            for index, row in filtered_kpi_data.iterrows():
-                with st.container(border=True): # Using a container to create a "card"
-                    st.subheader(f"{row['Type']}")
-                    
-                    kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
-                    kpi_col1.metric("Completion", f"{row['Completion %']:.2f}%")
-                    kpi_col2.metric("As Built", f"{row['As Built']:,.2f}")
-                    kpi_col3.metric("Left to be Built", f"{row['Left to be Built']:,.2f}")
-        else:
-            st.info("No data to display for the selected project types.")
 
     # --- Raw Data Table ---
     with st.expander("🔍 View Raw Data Table"):
