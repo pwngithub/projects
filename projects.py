@@ -1,23 +1,47 @@
 import streamlit as st
 import pandas as pd
-import altair as alt
+from datetime import datetime
 
 # --- Page Configuration ---
-# Set the page title and a descriptive icon for the browser tab.
+# Set the page title, icon, and layout. Wide layout gives more space for content.
 st.set_page_config(
-    page_title="Project Dashboard",
+    page_title="PBB Project Dashboard",
     page_icon="🚀",
-    layout="wide" # Use the full page width for a better view of the data.
+    layout="wide"
 )
 
+# --- Custom Styling (CSS Injection) ---
+# This injects CSS to customize the app's appearance for a more professional look.
+st.markdown("""
+<style>
+    /* Main app background color */
+    .stApp {
+        background-color: #F0F2F6;
+    }
+    /* Sidebar styling */
+    [data-testid="stSidebar"] {
+        background-color: #1a202c; /* A dark, modern sidebar color */
+    }
+    /* Style for metric labels */
+    .stMetric .st-ax {
+        color: #5A6474;
+    }
+    /* Custom horizontal rule */
+    hr {
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+        border-top: 1px solid #E2E8F0;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+
 # --- Logo and App Title ---
-# Replace the URL below with the actual URL of your PBB logo
 logo_url_main = "https://images.squarespace-cdn.com/content/v1/651eb4433b13e72c1034f375/369c5df0-5363-4827-b041-1add0367f447/PBB+long+logo.png?format=1500w" 
 st.image(logo_url_main)
 
 st.title("🚀 Project Performance Dashboard")
 st.markdown("An interactive dashboard to monitor project progress from a live Google Sheet.")
-st.info("ℹ️ This dashboard automatically refreshes every 5 minutes. You can also use the manual refresh button in the sidebar.")
 
 # --- Data Loading Function ---
 @st.cache_data(ttl=300) # The ttl argument tells Streamlit to expire the cache after 300 seconds (5 minutes)
@@ -30,10 +54,10 @@ def load_data(sheet_url):
         csv_url = sheet_url.replace("/edit?usp=sharing", "/export?format=csv")
         df = pd.read_csv(csv_url)
         df.columns = df.columns.str.strip()
-        return df
+        return df, datetime.now() # Return the dataframe and the time it was loaded
     except Exception as e:
         st.error(f"Failed to load data. Please ensure the Google Sheet is public. Error: {e}")
-        return None
+        return None, None
 
 # The public URL of your Google Sheet.
 GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/109p39EGYEikgbZT4kSW71_sXJNMM-4Tjjd5q-l9Tx_0/edit?usp=sharing"
@@ -68,7 +92,7 @@ def process_data(df):
     return kpi_summary
 
 # --- Main App Logic ---
-dataframe = load_data(GOOGLE_SHEET_URL)
+dataframe, load_time = load_data(GOOGLE_SHEET_URL)
 
 if dataframe is not None:
     kpi_data = process_data(dataframe)
@@ -77,11 +101,14 @@ if dataframe is not None:
         # --- Sidebar ---
         st.sidebar.header("Controls & Filters")
         
-        # Add a manual refresh button
+        # Add a manual refresh button and last refreshed time
         if st.sidebar.button("🔄 Refresh Data"):
             load_data.clear() # Clear the cached data
             st.rerun() # Rerun the app from the top
-            
+        
+        if load_time:
+            st.sidebar.info(f"Data last refreshed at:\n{load_time.strftime('%I:%M:%S %p')}")
+
         st.sidebar.header("Filter Options")
         all_types = kpi_data['Type'].unique()
         selected_types = st.sidebar.multiselect(
@@ -93,34 +120,39 @@ if dataframe is not None:
         filtered_kpi_data = kpi_data[kpi_data['Type'].isin(selected_types)]
 
         # --- High-Level KPIs ---
-        st.header("Overall Project Health")
+        st.header("📊 Overall Project Health")
         total_design = filtered_kpi_data['Design'].sum()
         total_as_built = filtered_kpi_data['As Built'].sum()
         overall_completion = (total_as_built / total_design * 100) if total_design > 0 else 0
         
         col1, col2, col3 = st.columns(3)
-        col1.metric("Total Design", f"{total_design:,.0f}")
+        col1.metric("Total Design Scope", f"{total_design:,.0f}")
         col2.metric("Total As Built", f"{total_as_built:,.0f}")
         col3.metric("Overall Completion", f"{overall_completion:.2f}%")
 
         # --- Detailed KPI Section ---
-        st.header("Completion by Project Type")
+        st.header("🏗️ Completion by Project Type")
         if not filtered_kpi_data.empty:
             for index, row in filtered_kpi_data.iterrows():
-                st.subheader(f"{row['Type']}")
-                progress_value = int(row['Completion %'])
-                st.progress(progress_value)
-                
-                kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
-                kpi_col1.metric("Completion", f"{row['Completion %']:.2f}%")
-                kpi_col2.metric("As Built", f"{row['As Built']:,.2f}")
-                kpi_col3.metric("Design Target", f"{row['Design']:,.2f}")
-                st.markdown("---")
+                # Using a container for each type to group elements neatly
+                with st.container():
+                    st.subheader(f"{row['Type']}")
+                    
+                    # Custom progress bar with text label inside
+                    progress_text = f"{row['Completion %']:.2f}% Complete"
+                    st.progress(int(row['Completion %']), text=progress_text)
+                    
+                    # Metrics displayed in columns for a compact view
+                    kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
+                    kpi_col1.metric("Completion", f"{row['Completion %']:.2f}%")
+                    kpi_col2.metric("As Built", f"{row['As Built']:,.2f}")
+                    kpi_col3.metric("Design Target", f"{row['Design']:,.2f}")
+                    st.markdown("<hr>", unsafe_allow_html=True)
         else:
             st.info("No data to display for the selected project types.")
 
     # --- Raw Data Table ---
-    with st.expander("View Raw Data Table"):
+    with st.expander("🔍 View Raw Data Table"):
         columns_to_show = [col for col in dataframe.columns if not col.startswith('Unnamed')]
         display_df = dataframe[columns_to_show]
         st.dataframe(display_df)
