@@ -61,9 +61,14 @@ if dataframe is not None:
         
         # --- Data Cleaning for Robust Grouping ---
         # Clean 'Type' column: remove colons, strip whitespace, and set to title case for consistent grouping.
-        df_kpi['Type'] = df_kpi['Type'].astype(str).str.replace(':', '').str.strip().str.title()
+        df_kpi['Type'] = df_kpi['Type'].astype(str).str.replace(':', '', regex=False).str.strip().str.title()
         
-        # Convert columns to numeric, filling errors/blanks with 0
+        # --- Data Cleaning for Numeric Columns ---
+        # Convert to string and remove commas to handle numbers formatted as text (e.g., "1,234.56")
+        df_kpi['Design'] = df_kpi['Design'].astype(str).str.replace(',', '', regex=False)
+        df_kpi['As Built'] = df_kpi['As Built'].astype(str).str.replace(',', '', regex=False)
+        
+        # Now, convert columns to numeric, coercing errors to NaN, then filling with 0
         df_kpi['Design'] = pd.to_numeric(df_kpi['Design'], errors='coerce').fillna(0)
         df_kpi['As Built'] = pd.to_numeric(df_kpi['As Built'], errors='coerce').fillna(0)
 
