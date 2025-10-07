@@ -12,7 +12,7 @@ st.set_page_config(
 
 # --- Logo and App Title ---
 # Replace the URL below with the actual URL of your PBB logo
-logo_url_main = "https://placehold.co/1500x287/FFFFFF/000000?text=Your+PBB+Logo+Here" 
+logo_url_main = "https://images.squarespace-cdn.com/content/v1/651eb4433b13e72c1034f375/369c5df0-5363-4827-b041-1add0367f447/PBB+long+logo.png?format=1500w" 
 st.image(logo_url_main)
 
 st.title("🚀 Project Performance Dashboard")
@@ -75,10 +75,6 @@ if dataframe is not None:
     
     if kpi_data is not None:
         # --- Sidebar ---
-        # Replace the URL below with the actual URL of your Pioneer logo
-        logo_url = "https://placehold.co/300x100/FFFFFF/000000?text=Pioneer+Logo"
-        st.sidebar.image(logo_url, use_column_width=True)
-        
         st.sidebar.header("Controls & Filters")
         
         # Add a manual refresh button
