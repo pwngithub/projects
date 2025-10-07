@@ -13,7 +13,7 @@ st.set_page_config(
 # --- App Title and Description ---
 st.title("🚀 Project Performance Dashboard")
 st.markdown("An interactive dashboard to monitor project progress from a live Google Sheet.")
-st.info("ℹ️ This dashboard automatically refreshes data from the Google Sheet every 5 minutes.")
+st.info("ℹ️ This dashboard automatically refreshes every 5 minutes. You can also use the manual refresh button in the sidebar.")
 
 # --- Data Loading Function ---
 @st.cache_data(ttl=300) # The ttl argument tells Streamlit to expire the cache after 300 seconds (5 minutes)
@@ -70,7 +70,14 @@ if dataframe is not None:
     kpi_data = process_data(dataframe)
     
     if kpi_data is not None:
-        # --- Sidebar Filters ---
+        # --- Sidebar ---
+        st.sidebar.header("Controls & Filters")
+        
+        # Add a manual refresh button
+        if st.sidebar.button("🔄 Refresh Data"):
+            load_data.clear() # Clear the cached data
+            st.rerun() # Rerun the app from the top
+            
         st.sidebar.header("Filter Options")
         all_types = kpi_data['Type'].unique()
         selected_types = st.sidebar.multiselect(
