@@ -86,13 +86,26 @@ if dataframe is not None:
         # Ensure percentage does not exceed 100%
         kpi_summary['Completion %'] = kpi_summary['Completion %'].clip(0, 100)
         
-        # Create an Altair bar chart for visualization
-        chart = alt.Chart(kpi_summary).mark_bar().encode(
+        # --- Create an Altair bar chart with text labels ---
+        # Base bar chart
+        bars = alt.Chart(kpi_summary).mark_bar().encode(
             x=alt.X('Type:N', title='Project Type', sort='-y'), # Sort bars from highest to lowest
             y=alt.Y('Completion %:Q', title='Completion Percentage', scale=alt.Scale(domain=[0, 100])),
             color=alt.Color('Type:N', legend=None), # Color each bar by its type
             tooltip=['Type', alt.Tooltip('Completion %', format='.2f'), 'As Built', 'Design']
-        ).properties(
+        )
+        
+        # Text labels to overlay on the bars
+        text = bars.mark_text(
+            align='center',
+            baseline='middle',
+            dy=-10  # Nudge text up slightly from the bar
+        ).encode(
+            text=alt.Text('Completion %:Q', format='~s') # Display the percentage value
+        )
+        
+        # Combine the bars and text layers
+        chart = (bars + text).properties(
             title='Project Completion Percentage'
         )
         
