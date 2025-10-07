@@ -71,7 +71,7 @@ def load_data(sheet_url):
         return None, None
 
 # The public URL of your Google Sheet.
-GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/109p39EGYEikgbZT4kSW71_sXJNMM-4Tjjd5q-l9Tx_0/edit?usp=sharing"
+GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/109p3EGYEikgbZT4kSW71_sXJNMM-4Tjjd5q-l9Tx_0/edit?usp=sharing"
 
 # --- Data Processing Function ---
 def process_data(df):
@@ -122,7 +122,7 @@ if dataframe is not None:
 
         st.sidebar.header("Filter Options")
         all_types = kpi_data['Type'].unique()
-        selected_types = st.sidebar.multelect(
+        selected_types = st.sidebar.multiselect(
             "Select Project Type(s):",
             options=all_types,
             default=all_types
