@@ -41,6 +41,34 @@ dataframe = load_data(GOOGLE_SHEET_URL)
 
 # Only attempt to display the data if it was loaded successfully.
 if dataframe is not None:
+    # --- Summary Metrics ---
+    st.header("Project Progress Summary")
+
+    try:
+        # Convert relevant columns to numeric, coercing errors to NaN and filling with 0
+        # This prevents errors if the columns contain non-numeric data or are empty.
+        design_col = pd.to_numeric(dataframe['Design'], errors='coerce').fillna(0)
+        build_col = pd.to_numeric(dataframe['Build'], errors='coerce').fillna(0)
+        left_col = pd.to_numeric(dataframe['Left to be build'], errors='coerce').fillna(0)
+        
+        # Calculate the totals
+        total_design = int(design_col.sum())
+        total_build = int(build_col.sum())
+        total_left = int(left_col.sum())
+
+        # Display metrics in columns for a clean layout
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Total Design", f"{total_design:,}")
+        col2.metric("Total Completed (Build)", f"{total_build:,}")
+        col3.metric("Left to Build", f"{total_left:,}")
+
+    except KeyError as e:
+        st.error(f"A required column is missing from the sheet: {e}. Please check your Google Sheet for 'Design', 'Build', and 'Left to be build' columns.")
+    except Exception as e:
+        st.error(f"An error occurred during metric calculation: {e}")
+
+
+    # --- Display Data Table ---
     st.header("Project Data Table")
     
     # Display the entire DataFrame as an interactive table in the app.
