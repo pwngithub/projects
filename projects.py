@@ -49,6 +49,9 @@ if dataframe is not None:
     try:
         # Create a copy to avoid modifying the cached dataframe
         df_kpi = dataframe.copy()
+
+        # Drop rows where 'Type' is missing to avoid errors and an unwanted 'Nan' category
+        df_kpi.dropna(subset=['Type'], inplace=True)
         
         # Ensure required columns exist for the calculation
         required_cols = ['Type', 'Design', 'As Built']
@@ -57,14 +60,14 @@ if dataframe is not None:
                 raise KeyError(f"Required column '{col}' not found for KPI calculation.")
         
         # --- Data Cleaning for Robust Grouping ---
-        # Clean the 'Type' column to handle inconsistencies like whitespace or capitalization.
-        df_kpi['Type'] = df_kpi['Type'].astype(str).str.strip().str.title()
+        # Clean 'Type' column: remove colons, strip whitespace, and set to title case for consistent grouping.
+        df_kpi['Type'] = df_kpi['Type'].astype(str).str.replace(':', '').str.strip().str.title()
         
         # Convert columns to numeric, filling errors/blanks with 0
         df_kpi['Design'] = pd.to_numeric(df_kpi['Design'], errors='coerce').fillna(0)
         df_kpi['As Built'] = pd.to_numeric(df_kpi['As Built'], errors='coerce').fillna(0)
 
-        # Group by 'Type' and sum the values
+        # Group by the cleaned 'Type' column and sum the values
         kpi_summary = df_kpi.groupby('Type').agg({
             'Design': 'sum',
             'As Built': 'sum'
