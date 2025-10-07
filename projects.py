@@ -1,68 +1,23 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+import altair as alt
 
 # --- Page Configuration ---
-# Set the page title, icon, and layout. Wide layout gives more space for content.
+# Set the page title and a descriptive icon for the browser tab.
 st.set_page_config(
-    page_title="PBB Project Dashboard",
+    page_title="Project Dashboard",
     page_icon="🚀",
-    layout="wide"
+    layout="wide" # Use the full page width for a better view of the data.
 )
 
-# --- Custom Styling (CSS Injection) ---
-# This version uses a simplified, high-contrast theme to ensure maximum readability.
-st.markdown("""
-<style>
-    /* Main app background color - clean white */
-    .stApp {
-        background-color: #FFFFFF;
-    }
-    /* Force all default text in the app to be pure black for max contrast */
-    body, p, div, span, label, input {
-        color: #000000 !important;
-    }
-    /* Sidebar styling - dark background */
-    [data-testid="stSidebar"] {
-        background-color: #1a202c; 
-    }
-    /* Ensure all text within the sidebar is bright white */
-    [data-testid="stSidebar"] * {
-        color: #FFFFFF !important;
-    }
-    /* Make headers pure black and bold for emphasis */
-    h1, h2, h3, h4, h5, h6 {
-        color: #000000 !important;
-        font-weight: bold;
-    }
-    /* Style for metric labels - pure black */
-    .stMetric .st-ax {
-        color: #000000 !important;
-    }
-    /* Style for metric values - pure black and bold */
-    [data-testid="stMetricValue"] {
-        color: #000000 !important;
-        font-weight: bold;
-    }
-    /* Specifically target the expander header to ensure it's black */
-    [data-testid="stExpander"] summary {
-        color: #000000 !important;
-    }
-    /* Style the selected items in the multiselect widget for readability */
-    [data-testid="stSidebar"] .stMultiSelect [data-baseweb="tag"] {
-        background-color: #0072C6; /* A contrasting blue background for tags */
-        color: #FFFFFF !important; /* White text on the tags */
-    }
-</style>
-""", unsafe_allow_html=True)
-
-
 # --- Logo and App Title ---
+# Replace the URL below with the actual URL of your PBB logo
 logo_url_main = "https://images.squarespace-cdn.com/content/v1/651eb4433b13e72c1034f375/369c5df0-5363-4827-b041-1add0367f447/PBB+long+logo.png?format=1500w" 
 st.image(logo_url_main)
 
 st.title("🚀 Project Performance Dashboard")
 st.markdown("An interactive dashboard to monitor project progress from a live Google Sheet.")
+st.info("ℹ️ This dashboard automatically refreshes every 5 minutes. You can also use the manual refresh button in the sidebar.")
 
 # --- Data Loading Function ---
 @st.cache_data(ttl=300) # The ttl argument tells Streamlit to expire the cache after 300 seconds (5 minutes)
@@ -75,10 +30,10 @@ def load_data(sheet_url):
         csv_url = sheet_url.replace("/edit?usp=sharing", "/export?format=csv")
         df = pd.read_csv(csv_url)
         df.columns = df.columns.str.strip()
-        return df, datetime.now() # Return the dataframe and the time it was loaded
+        return df
     except Exception as e:
         st.error(f"Failed to load data. Please ensure the Google Sheet is public. Error: {e}")
-        return None, None
+        return None
 
 # The public URL of your Google Sheet.
 GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/109p39EGYEikgbZT4kSW71_sXJNMM-4Tjjd5q-l9Tx_0/edit?usp=sharing"
@@ -113,7 +68,7 @@ def process_data(df):
     return kpi_summary
 
 # --- Main App Logic ---
-dataframe, load_time = load_data(GOOGLE_SHEET_URL)
+dataframe = load_data(GOOGLE_SHEET_URL)
 
 if dataframe is not None:
     kpi_data = process_data(dataframe)
@@ -122,13 +77,11 @@ if dataframe is not None:
         # --- Sidebar ---
         st.sidebar.header("Controls & Filters")
         
+        # Add a manual refresh button
         if st.sidebar.button("🔄 Refresh Data"):
-            load_data.clear()
-            st.rerun()
-        
-        if load_time:
-            st.sidebar.info(f"Data last refreshed at:\n{load_time.strftime('%I:%M:%S %p')}")
-
+            load_data.clear() # Clear the cached data
+            st.rerun() # Rerun the app from the top
+            
         st.sidebar.header("Filter Options")
         all_types = kpi_data['Type'].unique()
         selected_types = st.sidebar.multiselect(
@@ -140,39 +93,38 @@ if dataframe is not None:
         filtered_kpi_data = kpi_data[kpi_data['Type'].isin(selected_types)]
 
         # --- High-Level KPIs ---
-        st.header("📊 Overall Project Health")
+        st.header("Overall Project Health")
         total_design = filtered_kpi_data['Design'].sum()
         total_as_built = filtered_kpi_data['As Built'].sum()
         overall_completion = (total_as_built / total_design * 100) if total_design > 0 else 0
         
         col1, col2, col3 = st.columns(3)
-        col1.metric("Total Design Scope", f"{total_design:,.0f}")
+        col1.metric("Total Design", f"{total_design:,.0f}")
         col2.metric("Total As Built", f"{total_as_built:,.0f}")
         col3.metric("Overall Completion", f"{overall_completion:.2f}%")
-        st.divider()
 
         # --- Detailed KPI Section ---
-        st.header("🏗️ Completion by Project Type")
+        st.header("Completion by Project Type")
         if not filtered_kpi_data.empty:
             for index, row in filtered_kpi_data.iterrows():
                 st.subheader(f"{row['Type']}")
-                
-                progress_text = f"{row['Completion %']:.2f}% Complete"
-                st.progress(int(row['Completion %']), text=progress_text)
+                progress_value = int(row['Completion %'])
+                st.progress(progress_value)
                 
                 kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
                 kpi_col1.metric("Completion", f"{row['Completion %']:.2f}%")
                 kpi_col2.metric("As Built", f"{row['As Built']:,.2f}")
                 kpi_col3.metric("Design Target", f"{row['Design']:,.2f}")
-                st.divider() # Use Streamlit's native divider for clear separation
+                st.markdown("---")
         else:
             st.info("No data to display for the selected project types.")
 
     # --- Raw Data Table ---
-    with st.expander("🔍 View Raw Data Table"):
+    with st.expander("View Raw Data Table"):
         columns_to_show = [col for col in dataframe.columns if not col.startswith('Unnamed')]
         display_df = dataframe[columns_to_show]
         st.dataframe(display_df)
 else:
     st.warning("Could not display data. Please check the sheet's sharing settings and the URL.")
+
 
