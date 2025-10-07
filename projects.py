@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import altair as alt
 from datetime import datetime
 
 # --- Page Configuration ---
@@ -110,10 +111,33 @@ if dataframe is not None:
         st.header("🏗️ Completion by Project Type")
         
         if not filtered_kpi_data.empty:
+            # --- Completion Percentage Bar Chart ---
+            chart = alt.Chart(filtered_kpi_data).mark_bar().encode(
+                x=alt.X('Completion %:Q', title='Completion Percentage', scale=alt.Scale(domain=[0, 100])),
+                y=alt.Y('Type:N', sort='-x', title='Project Type'),
+                tooltip=['Type', 'Completion %', 'As Built', 'Design']
+            ).properties(
+                title='Completion Percentage by Type'
+            )
+            
+            text = chart.mark_text(
+                align='left',
+                baseline='middle',
+                dx=3  # Nudges text to right so it doesn't overlap bar
+            ).encode(
+                text=alt.Text('Completion %:Q', format='.2f')
+            )
+
+            st.altair_chart(chart + text, use_container_width=True)
+
+
             for index, row in filtered_kpi_data.iterrows():
                 with st.container(border=True): # Using a container to create a "card"
                     st.subheader(f"{row['Type']}")
                     
+                    # Add a progress bar for a quick visual cue
+                    st.progress(int(row['Completion %']))
+
                     kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
                     kpi_col1.metric("Completion", f"{row['Completion %']:.2f}%")
                     kpi_col2.metric("As Built", f"{row['As Built']:,.2f}")
