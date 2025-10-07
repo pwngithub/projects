@@ -35,7 +35,7 @@ def load_data(sheet_url):
         return None
 
 # The public URL of your Google Sheet.
-GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/109p39EGYEikgbZT4kSW71_sXJNMM-4Tjjd5q-l9Tx_0/edit?usp=sharing"
+GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/109p3EGYEikgbZT4kSW71_sXJNMM-4Tjjd5q-l9Tx_0/edit?usp=sharing"
 
 # --- Main App Logic ---
 # Load the data using the function defined above.
@@ -50,8 +50,8 @@ if dataframe is not None:
         # Convert relevant columns to numeric, coercing errors to NaN and filling with 0
         # This prevents errors if the columns contain non-numeric data or are empty.
         design_col = pd.to_numeric(dataframe['Design'], errors='coerce').fillna(0)
-        build_col = pd.to_numeric(dataframe['Build'], errors='coerce').fillna(0)
-        left_col = pd.to_numeric(dataframe['Left to be build'], errors='coerce').fillna(0)
+        build_col = pd.to_numeric(dataframe['As Built'], errors='coerce').fillna(0)
+        left_col = pd.to_numeric(dataframe['Left to be Built'], errors='coerce').fillna(0)
         
         # Calculate the totals
         total_design = int(design_col.sum())
@@ -61,11 +61,11 @@ if dataframe is not None:
         # Display metrics in columns for a clean layout
         col1, col2, col3 = st.columns(3)
         col1.metric("Total Design", f"{total_design:,}")
-        col2.metric("Total Completed (Build)", f"{total_build:,}")
-        col3.metric("Left to Build", f"{total_left:,}")
+        col2.metric("Total Completed (As Built)", f"{total_build:,}")
+        col3.metric("Left to be Built", f"{total_left:,}")
 
     except KeyError as e:
-        st.error(f"A required column is missing from the sheet: {e}. Please check your Google Sheet for 'Design', 'Build', and 'Left to be build' columns.")
+        st.error(f"A required column is missing from the sheet: {e}. Please check your Google Sheet for 'Design', 'As Built', and 'Left to be Built' columns.")
     except Exception as e:
         st.error(f"An error occurred during metric calculation: {e}")
 
