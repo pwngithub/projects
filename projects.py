@@ -5,18 +5,16 @@ import altair as alt
 # --- Page Configuration ---
 # Set the page title and a descriptive icon for the browser tab.
 st.set_page_config(
-    page_title="Google Sheet Viewer",
-    page_icon="📊",
+    page_title="Project Dashboard",
+    page_icon="🚀",
     layout="wide" # Use the full page width for a better view of the data.
 )
 
 # --- App Title and Description ---
-st.title("📊 Google Sheet Data Viewer")
-st.markdown("This application reads data directly from a public Google Sheet and displays it in an interactive table.")
+st.title("🚀 Project Performance Dashboard")
+st.markdown("An interactive dashboard to monitor project progress from a live Google Sheet.")
 
 # --- Data Loading Function ---
-# We use st.cache_data to store the data in memory after the first load.
-# This makes the app faster because it won't re-download the data every time you interact with it.
 @st.cache_data
 def load_data(sheet_url):
     """
@@ -24,110 +22,96 @@ def load_data(sheet_url):
     and returns the data as a Pandas DataFrame with cleaned column names.
     """
     try:
-        # The URL is modified to point to a CSV export of the sheet.
         csv_url = sheet_url.replace("/edit?usp=sharing", "/export?format=csv")
         df = pd.read_csv(csv_url)
-        # Clean column names by stripping leading/trailing whitespace
         df.columns = df.columns.str.strip()
         return df
     except Exception as e:
-        # Display a user-friendly error message if the sheet can't be accessed.
         st.error(f"Failed to load data. Please ensure the Google Sheet is public. Error: {e}")
         return None
 
 # The public URL of your Google Sheet.
 GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/109p39EGYEikgbZT4kSW71_sXJNMM-4Tjjd5q-l9Tx_0/edit?usp=sharing"
 
+# --- Data Processing Function ---
+def process_data(df):
+    """Cleans and processes the dataframe for KPI calculations."""
+    df_processed = df.copy()
+    required_cols = ['Type', 'Design', 'As Built']
+    if not all(col in df_processed.columns for col in required_cols):
+        missing = [col for col in required_cols if col not in df_processed.columns]
+        st.warning(f"Missing required columns for KPI calculation: {', '.join(missing)}")
+        return None
+
+    df_processed.dropna(subset=['Type'], inplace=True)
+    df_processed['Type'] = df_processed['Type'].astype(str).str.replace(':', '', regex=False).str.strip().str.title()
+    
+    for col in ['Design', 'As Built']:
+        df_processed[col] = df_processed[col].astype(str).str.replace(',', '', regex=False)
+        df_processed[col] = pd.to_numeric(df_processed[col], errors='coerce').fillna(0)
+    
+    kpi_summary = df_processed.groupby('Type').agg({
+        'Design': 'sum',
+        'As Built': 'sum'
+    }).reset_index()
+
+    kpi_summary['Completion %'] = 0
+    mask = kpi_summary['Design'] > 0
+    kpi_summary.loc[mask, 'Completion %'] = (kpi_summary.loc[mask, 'As Built'] / kpi_summary.loc[mask, 'Design']) * 100
+    kpi_summary['Completion %'] = kpi_summary['Completion %'].clip(0, 100)
+    
+    return kpi_summary
+
 # --- Main App Logic ---
-# Load the data using the function defined above.
 dataframe = load_data(GOOGLE_SHEET_URL)
 
-# Only attempt to display the data if it was loaded successfully.
 if dataframe is not None:
-    # --- KPI Graphs ---
-    st.header("KPI: Completion Percentage by Type")
-    try:
-        # Create a copy to avoid modifying the cached dataframe
-        df_kpi = dataframe.copy()
-
-        # Drop rows where 'Type' is missing to avoid errors and an unwanted 'Nan' category
-        df_kpi.dropna(subset=['Type'], inplace=True)
-        
-        # Ensure required columns exist for the calculation
-        required_cols = ['Type', 'Design', 'As Built']
-        for col in required_cols:
-            if col not in df_kpi.columns:
-                raise KeyError(f"Required column '{col}' not found for KPI calculation.")
-        
-        # --- Data Cleaning for Robust Grouping ---
-        # Clean 'Type' column: remove colons, strip whitespace, and set to title case for consistent grouping.
-        df_kpi['Type'] = df_kpi['Type'].astype(str).str.replace(':', '', regex=False).str.strip().str.title()
-        
-        # --- Data Cleaning for Numeric Columns ---
-        # Convert to string and remove commas to handle numbers formatted as text (e.g., "1,234.56")
-        df_kpi['Design'] = df_kpi['Design'].astype(str).str.replace(',', '', regex=False)
-        df_kpi['As Built'] = df_kpi['As Built'].astype(str).str.replace(',', '', regex=False)
-        
-        # Now, convert columns to numeric, coercing errors to NaN, then filling with 0
-        df_kpi['Design'] = pd.to_numeric(df_kpi['Design'], errors='coerce').fillna(0)
-        df_kpi['As Built'] = pd.to_numeric(df_kpi['As Built'], errors='coerce').fillna(0)
-
-        # Group by the cleaned 'Type' column and sum the values
-        kpi_summary = df_kpi.groupby('Type').agg({
-            'Design': 'sum',
-            'As Built': 'sum'
-        }).reset_index()
-
-        # Calculate completion percentage, handling cases where Design is 0 to avoid division errors
-        kpi_summary['Completion %'] = 0
-        mask = kpi_summary['Design'] > 0
-        kpi_summary.loc[mask, 'Completion %'] = (kpi_summary.loc[mask, 'As Built'] / kpi_summary.loc[mask, 'Design']) * 100
-        
-        # Ensure percentage does not exceed 100%
-        kpi_summary['Completion %'] = kpi_summary['Completion %'].clip(0, 100)
-        
-        # --- Create an Altair bar chart with text labels ---
-        # Base bar chart
-        bars = alt.Chart(kpi_summary).mark_bar().encode(
-            x=alt.X('Type:N', title='Project Type', sort='-y'), # Sort bars from highest to lowest
-            y=alt.Y('Completion %:Q', title='Completion Percentage', scale=alt.Scale(domain=[0, 100])),
-            color=alt.Color('Type:N', legend=None), # Color each bar by its type
-            tooltip=['Type', alt.Tooltip('Completion %', format='.2f'), 'As Built', 'Design']
-        )
-        
-        # Text labels to overlay on the bars
-        text = bars.mark_text(
-            align='center',
-            baseline='middle',
-            dy=-10  # Nudge text up slightly from the bar
-        ).encode(
-            text=alt.Text('Completion %:Q', format='~s') # Display the percentage value
-        )
-        
-        # Combine the bars and text layers
-        chart = (bars + text).properties(
-            title='Project Completion Percentage'
-        )
-        
-        st.altair_chart(chart, use_container_width=True)
-
-    except KeyError as e:
-        st.warning(f"Could not generate KPI graph. {e}")
-    except Exception as e:
-        st.error(f"An error occurred while creating the KPI graph: {e}")
-
-    # --- Filter out unwanted columns ---
-    # Get a list of columns that do not start with 'Unnamed'
-    columns_to_show = [col for col in dataframe.columns if not col.startswith('Unnamed')]
+    kpi_data = process_data(dataframe)
     
-    # Create a new view of the dataframe with only the desired columns
-    display_df = dataframe[columns_to_show]
+    if kpi_data is not None:
+        # --- Sidebar Filters ---
+        st.sidebar.header("Filter Options")
+        all_types = kpi_data['Type'].unique()
+        selected_types = st.sidebar.multiselect(
+            "Select Project Type(s):",
+            options=all_types,
+            default=all_types
+        )
+        
+        filtered_kpi_data = kpi_data[kpi_data['Type'].isin(selected_types)]
 
-    # --- Display Data Table ---
-    st.header("Project Data Table")
-    
-    # Display the filtered DataFrame as an interactive table in the app.
-    st.dataframe(display_df)
+        # --- High-Level KPIs ---
+        st.header("Overall Project Health")
+        total_design = filtered_kpi_data['Design'].sum()
+        total_as_built = filtered_kpi_data['As Built'].sum()
+        overall_completion = (total_as_built / total_design * 100) if total_design > 0 else 0
+        
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Total Design", f"{total_design:,.0f}")
+        col2.metric("Total As Built", f"{total_as_built:,.0f}")
+        col3.metric("Overall Completion", f"{overall_completion:.2f}%")
+
+        # --- Detailed KPI Section ---
+        st.header("Completion by Project Type")
+        if not filtered_kpi_data.empty:
+            for index, row in filtered_kpi_data.iterrows():
+                st.subheader(f"{row['Type']}")
+                progress_value = int(row['Completion %'])
+                st.progress(progress_value)
+                
+                kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
+                kpi_col1.metric("Completion", f"{row['Completion %']:.2f}%")
+                kpi_col2.metric("As Built", f"{row['As Built']:,.2f}")
+                kpi_col3.metric("Design Target", f"{row['Design']:,.2f}")
+                st.markdown("---")
+        else:
+            st.info("No data to display for the selected project types.")
+
+    # --- Raw Data Table ---
+    with st.expander("View Raw Data Table"):
+        columns_to_show = [col for col in dataframe.columns if not col.startswith('Unnamed')]
+        display_df = dataframe[columns_to_show]
+        st.dataframe(display_df)
 else:
     st.warning("Could not display data. Please check the sheet's sharing settings and the URL.")
 
