@@ -14,27 +14,33 @@ st.set_page_config(
 # This injects CSS to customize the app's appearance for a more professional and readable look.
 st.markdown("""
 <style>
-    /* Main app background color - changed to clean white */
+    /* Set a default dark text color for the whole app for better readability */
+    body {
+        color: #333333;
+    }
+    /* Main app background color - clean white */
     .stApp {
         background-color: #FFFFFF;
     }
-    /* Sidebar styling - kept dark for contrast */
+    /* Sidebar styling - dark background for contrast */
     [data-testid="stSidebar"] {
         background-color: #1a202c; 
     }
-    /* Style for metric labels - darker for better contrast */
-    .stMetric .st-ax {
-        color: #262730;
+    /* Ensure all text within the sidebar is white and readable */
+    [data-testid="stSidebar"] * {
+        color: #FFFFFF;
     }
-    /* Style for metric values */
-    [data-testid="stMetricValue"] {
+    /* Make headers dark and prominent */
+    h1, h2, h3, h4, h5, h6 {
         color: #1a202c;
     }
-    /* Custom horizontal rule */
-    hr {
-        margin-top: 1rem;
-        margin-bottom: 1rem;
-        border-top: 1px solid #E2E8F0;
+    /* Style for metric labels - a slightly lighter dark gray */
+    .stMetric .st-ax {
+        color: #555555;
+    }
+    /* Style for metric values - strong and dark for emphasis */
+    [data-testid="stMetricValue"] {
+        color: #1a202c;
     }
     /* Styling for the KPI containers to make them look like cards */
     .st-emotion-cache-z5fcl4 {
