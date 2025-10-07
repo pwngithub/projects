@@ -11,43 +11,38 @@ st.set_page_config(
 )
 
 # --- Custom Styling (CSS Injection) ---
-# This injects CSS to customize the app's appearance for a more professional and readable look.
+# This version uses a simplified, high-contrast theme to ensure maximum readability.
 st.markdown("""
 <style>
-    /* Set a default dark text color for the whole app for better readability */
-    body {
-        color: #333333;
-    }
     /* Main app background color - clean white */
     .stApp {
         background-color: #FFFFFF;
     }
-    /* Sidebar styling - dark background for contrast */
+    /* Force all default text in the app to be pure black for max contrast */
+    body, p, div, span, label, input {
+        color: #000000 !important;
+    }
+    /* Sidebar styling - dark background */
     [data-testid="stSidebar"] {
         background-color: #1a202c; 
     }
-    /* Ensure all text within the sidebar is white and readable */
+    /* Ensure all text within the sidebar is bright white */
     [data-testid="stSidebar"] * {
-        color: #FFFFFF;
+        color: #FFFFFF !important;
     }
-    /* Make headers dark and prominent */
+    /* Make headers pure black and bold for emphasis */
     h1, h2, h3, h4, h5, h6 {
-        color: #1a202c;
+        color: #000000 !important;
+        font-weight: bold;
     }
-    /* Style for metric labels - a slightly lighter dark gray */
+    /* Style for metric labels - pure black */
     .stMetric .st-ax {
-        color: #555555;
+        color: #000000 !important;
     }
-    /* Style for metric values - strong and dark for emphasis */
+    /* Style for metric values - pure black and bold */
     [data-testid="stMetricValue"] {
-        color: #1a202c;
-    }
-    /* Styling for the KPI containers to make them look like cards */
-    .st-emotion-cache-z5fcl4 {
-        border: 1px solid #E2E8F0;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        color: #000000 !important;
+        font-weight: bold;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -118,10 +113,9 @@ if dataframe is not None:
         # --- Sidebar ---
         st.sidebar.header("Controls & Filters")
         
-        # Add a manual refresh button and last refreshed time
         if st.sidebar.button("🔄 Refresh Data"):
-            load_data.clear() # Clear the cached data
-            st.rerun() # Rerun the app from the top
+            load_data.clear()
+            st.rerun()
         
         if load_time:
             st.sidebar.info(f"Data last refreshed at:\n{load_time.strftime('%I:%M:%S %p')}")
@@ -138,33 +132,30 @@ if dataframe is not None:
 
         # --- High-Level KPIs ---
         st.header("📊 Overall Project Health")
-        with st.container():
-            total_design = filtered_kpi_data['Design'].sum()
-            total_as_built = filtered_kpi_data['As Built'].sum()
-            overall_completion = (total_as_built / total_design * 100) if total_design > 0 else 0
-            
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Total Design Scope", f"{total_design:,.0f}")
-            col2.metric("Total As Built", f"{total_as_built:,.0f}")
-            col3.metric("Overall Completion", f"{overall_completion:.2f}%")
+        total_design = filtered_kpi_data['Design'].sum()
+        total_as_built = filtered_kpi_data['As Built'].sum()
+        overall_completion = (total_as_built / total_design * 100) if total_design > 0 else 0
+        
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Total Design Scope", f"{total_design:,.0f}")
+        col2.metric("Total As Built", f"{total_as_built:,.0f}")
+        col3.metric("Overall Completion", f"{overall_completion:.2f}%")
+        st.divider()
 
         # --- Detailed KPI Section ---
         st.header("🏗️ Completion by Project Type")
         if not filtered_kpi_data.empty:
             for index, row in filtered_kpi_data.iterrows():
-                # Using a container for each type to group elements neatly
-                with st.container():
-                    st.subheader(f"{row['Type']}")
-                    
-                    # Custom progress bar with text label inside
-                    progress_text = f"{row['Completion %']:.2f}% Complete"
-                    st.progress(int(row['Completion %']), text=progress_text)
-                    
-                    # Metrics displayed in columns for a compact view
-                    kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
-                    kpi_col1.metric("Completion", f"{row['Completion %']:.2f}%")
-                    kpi_col2.metric("As Built", f"{row['As Built']:,.2f}")
-                    kpi_col3.metric("Design Target", f"{row['Design']:,.2f}")
+                st.subheader(f"{row['Type']}")
+                
+                progress_text = f"{row['Completion %']:.2f}% Complete"
+                st.progress(int(row['Completion %']), text=progress_text)
+                
+                kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
+                kpi_col1.metric("Completion", f"{row['Completion %']:.2f}%")
+                kpi_col2.metric("As Built", f"{row['As Built']:,.2f}")
+                kpi_col3.metric("Design Target", f"{row['Design']:,.2f}")
+                st.divider() # Use Streamlit's native divider for clear separation
         else:
             st.info("No data to display for the selected project types.")
 
