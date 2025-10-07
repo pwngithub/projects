@@ -10,7 +10,11 @@ st.set_page_config(
     layout="wide" # Use the full page width for a better view of the data.
 )
 
-# --- App Title and Description ---
+# --- Logo and App Title ---
+# Replace the URL below with the actual URL of your PBB logo
+logo_url_main = "https://placehold.co/1500x287/FFFFFF/000000?text=Your+PBB+Logo+Here" 
+st.image(logo_url_main)
+
 st.title("🚀 Project Performance Dashboard")
 st.markdown("An interactive dashboard to monitor project progress from a live Google Sheet.")
 st.info("ℹ️ This dashboard automatically refreshes every 5 minutes. You can also use the manual refresh button in the sidebar.")
