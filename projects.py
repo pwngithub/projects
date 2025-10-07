@@ -56,6 +56,10 @@ if dataframe is not None:
             if col not in df_kpi.columns:
                 raise KeyError(f"Required column '{col}' not found for KPI calculation.")
         
+        # --- Data Cleaning for Robust Grouping ---
+        # Clean the 'Type' column to handle inconsistencies like whitespace or capitalization.
+        df_kpi['Type'] = df_kpi['Type'].astype(str).str.strip().str.title()
+        
         # Convert columns to numeric, filling errors/blanks with 0
         df_kpi['Design'] = pd.to_numeric(df_kpi['Design'], errors='coerce').fillna(0)
         df_kpi['As Built'] = pd.to_numeric(df_kpi['As Built'], errors='coerce').fillna(0)
