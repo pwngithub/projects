@@ -43,38 +43,18 @@ dataframe = load_data(GOOGLE_SHEET_URL)
 
 # Only attempt to display the data if it was loaded successfully.
 if dataframe is not None:
-    # --- Summary Metrics ---
-    st.header("Project Progress Summary")
-
-    try:
-        # Convert relevant columns to numeric, coercing errors to NaN and filling with 0
-        # This prevents errors if the columns contain non-numeric data or are empty.
-        design_col = pd.to_numeric(dataframe['Design'], errors='coerce').fillna(0)
-        build_col = pd.to_numeric(dataframe['As Built'], errors='coerce').fillna(0)
-        left_col = pd.to_numeric(dataframe['Left to be Built'], errors='coerce').fillna(0)
-        
-        # Calculate the totals
-        total_design = int(design_col.sum())
-        total_build = int(build_col.sum())
-        total_left = int(left_col.sum())
-
-        # Display metrics in columns for a clean layout
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Total Design", f"{total_design:,}")
-        col2.metric("Total Completed (As Built)", f"{total_build:,}")
-        col3.metric("Left to be Built", f"{total_left:,}")
-
-    except KeyError as e:
-        st.error(f"A required column is missing from the sheet: {e}. Please check your Google Sheet for 'Design', 'As Built', and 'Left to be Built' columns.")
-    except Exception as e:
-        st.error(f"An error occurred during metric calculation: {e}")
-
+    # --- Filter out unwanted columns ---
+    # Get a list of columns that do not start with 'Unnamed'
+    columns_to_show = [col for col in dataframe.columns if not col.startswith('Unnamed')]
+    
+    # Create a new view of the dataframe with only the desired columns
+    display_df = dataframe[columns_to_show]
 
     # --- Display Data Table ---
     st.header("Project Data Table")
     
-    # Display the entire DataFrame as an interactive table in the app.
-    st.dataframe(dataframe)
+    # Display the filtered DataFrame as an interactive table in the app.
+    st.dataframe(display_df)
 else:
     st.warning("Could not display data. Please check the sheet's sharing settings and the URL.")
 
