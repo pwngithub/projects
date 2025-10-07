@@ -44,6 +44,15 @@ st.markdown("""
         color: #000000 !important;
         font-weight: bold;
     }
+    /* Specifically target the expander header to ensure it's black */
+    [data-testid="stExpander"] summary {
+        color: #000000 !important;
+    }
+    /* Style the selected items in the multiselect widget for readability */
+    [data-testid="stSidebar"] .stMultiSelect [data-baseweb="tag"] {
+        background-color: #0072C6; /* A contrasting blue background for tags */
+        color: #FFFFFF !important; /* White text on the tags */
+    }
 </style>
 """, unsafe_allow_html=True)
 
