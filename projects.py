@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import altair as alt
 from datetime import datetime
 
 # --- Page Configuration ---
@@ -110,27 +109,7 @@ if dataframe is not None:
         # --- Detailed KPI Section ---
         st.header("🏗️ Completion by Project Type")
         
-        # --- Comparative Bar Chart ---
         if not filtered_kpi_data.empty:
-            
-            # Re-structure data for Altair chart
-            chart_data = filtered_kpi_data.melt(
-                id_vars='Type', 
-                value_vars=['Design', 'As Built'], 
-                var_name='Category', 
-                value_name='Value'
-            )
-            
-            chart = alt.Chart(chart_data).mark_bar().encode(
-                x=alt.X('Value:Q', title='Amount'),
-                y=alt.Y('Type:N', sort='-x', title='Project Type'),
-                color='Category:N',
-                tooltip=['Type', 'Category', 'Value']
-            ).properties(
-                title='Design vs. As Built Comparison'
-            )
-            st.altair_chart(chart, use_container_width=True)
-
             for index, row in filtered_kpi_data.iterrows():
                 with st.container(border=True): # Using a container to create a "card"
                     st.subheader(f"{row['Type']}")
