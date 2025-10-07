@@ -71,6 +71,10 @@ if dataframe is not None:
     
     if kpi_data is not None:
         # --- Sidebar ---
+        # Replace the URL below with the actual URL of your Pioneer logo
+        logo_url = "https://placehold.co/300x100/FFFFFF/000000?text=Pioneer+Logo"
+        st.sidebar.image(logo_url, use_column_width=True)
+        
         st.sidebar.header("Controls & Filters")
         
         # Add a manual refresh button
