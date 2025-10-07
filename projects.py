@@ -1,171 +1,50 @@
-import json
-import os
+import streamlit as st
+import pandas as pd
 
-# Define the name of the file to store project data
-DATA_FILE = 'projects.json'
+# --- Page Configuration ---
+# Set the page title and a descriptive icon for the browser tab.
+st.set_page_config(
+    page_title="Google Sheet Viewer",
+    page_icon="📊",
+    layout="wide" # Use the full page width for a better view of the data.
+)
 
-def load_data():
-    """
-    Loads project data from the JSON file.
-    If the file doesn't exist, it returns an empty dictionary.
-    """
-    if not os.path.exists(DATA_FILE):
-        return {}
-    try:
-        with open(DATA_FILE, 'r') as f:
-            # Return an empty dict if the file is empty
-            content = f.read()
-            if not content:
-                return {}
-            return json.loads(content)
-    except (IOError, json.JSONDecodeError) as e:
-        print(f"Error loading data: {e}")
-        return {}
+# --- App Title and Description ---
+st.title("📊 Google Sheet Data Viewer")
+st.markdown("This application reads data directly from a public Google Sheet and displays it in an interactive table.")
 
-def save_data(data):
+# --- Data Loading Function ---
+# We use st.cache_data to store the data in memory after the first load.
+# This makes the app faster because it won't re-download the data every time you interact with it.
+@st.cache_data
+def load_data(sheet_url):
     """
-    Saves the project data to the JSON file.
+    Takes a Google Sheet URL, converts it to a CSV export URL,
+    and returns the data as a Pandas DataFrame.
     """
     try:
-        with open(DATA_FILE, 'w') as f:
-            json.dump(data, f, indent=4)
-    except IOError as e:
-        print(f"Error saving data: {e}")
+        # The URL is modified to point to a CSV export of the sheet.
+        csv_url = sheet_url.replace("/edit?usp=sharing", "/export?format=csv")
+        df = pd.read_csv(csv_url)
+        return df
+    except Exception as e:
+        # Display a user-friendly error message if the sheet can't be accessed.
+        st.error(f"Failed to load data. Please ensure the Google Sheet is public. Error: {e}")
+        return None
 
-def display_menu():
-    """
-    Displays the main menu of options to the user.
-    """
-    print("\n--- Project Tracking Menu ---")
-    print("1. View All Projects and Tasks")
-    print("2. Add a New Project")
-    print("3. Add a Task to a Project")
-    print("4. Update a Task's Status")
-    print("5. Exit")
-    print("-----------------------------")
+# The public URL of your Google Sheet.
+GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/109p39EGYEikgbZT4kSW71_sXJNMM-4Tjjd5q-l9Tx_0/edit?usp=sharing"
 
-def view_projects(data):
-    """
-    Displays all projects and their associated tasks and statuses.
-    """
-    if not data:
-        print("\nNo projects found. Add a project to get started!")
-        return
+# --- Main App Logic ---
+# Load the data using the function defined above.
+dataframe = load_data(GOOGLE_SHEET_URL)
 
-    print("\n--- All Projects ---")
-    for project_name, project_details in data.items():
-        print(f"\nProject: {project_name}")
-        tasks = project_details.get('tasks', [])
-        if not tasks:
-            print("  - No tasks yet.")
-        else:
-            for i, task in enumerate(tasks, 1):
-                # Using .get() for safe access to 'name' and 'status' keys
-                task_name = task.get('name', 'N/A')
-                status = task.get('status', 'N/A')
-                print(f"  {i}. {task_name} - [Status: {status}]")
-    print("--------------------")
+# Only attempt to display the data if it was loaded successfully.
+if dataframe is not None:
+    st.header("Project Data Table")
+    
+    # Display the entire DataFrame as an interactive table in the app.
+    st.dataframe(dataframe)
+else:
+    st.warning("Could not display data. Please check the sheet's sharing settings and the URL.")
 
-
-def add_project(data):
-    """
-    Prompts the user for a new project name and adds it to the data.
-    """
-    project_name = input("Enter the name for the new project: ").strip()
-    if not project_name:
-        print("Project name cannot be empty.")
-        return
-    if project_name in data:
-        print(f"Project '{project_name}' already exists.")
-    else:
-        data[project_name] = {"tasks": []}
-        save_data(data)
-        print(f"Project '{project_name}' added successfully.")
-
-def add_task(data):
-    """
-    Adds a new task to a specified project.
-    """
-    if not data:
-        print("\nNo projects exist. Please add a project first.")
-        return
-
-    project_name = input("Enter the project name to add a task to: ").strip()
-    if project_name not in data:
-        print(f"Project '{project_name}' not found.")
-        return
-
-    task_name = input("Enter the task description: ").strip()
-    if not task_name:
-        print("Task description cannot be empty.")
-        return
-        
-    new_task = {"name": task_name, "status": "Not Started"}
-    data[project_name]['tasks'].append(new_task)
-    save_data(data)
-    print(f"Task '{task_name}' added to project '{project_name}'.")
-
-def update_task_status(data):
-    """
-    Updates the status of a specific task in a project.
-    """
-    if not data:
-        print("\nNo projects exist. Please add a project first.")
-        return
-        
-    project_name = input("Enter the project name: ").strip()
-    if project_name not in data:
-        print(f"Project '{project_name}' not found.")
-        return
-
-    tasks = data[project_name].get('tasks', [])
-    if not tasks:
-        print(f"No tasks found for project '{project_name}'.")
-        return
-
-    print(f"\nTasks for '{project_name}':")
-    for i, task in enumerate(tasks, 1):
-        print(f"  {i}. {task['name']} - [Status: {task['status']}]")
-
-    try:
-        task_num_str = input("Enter the task number to update: ")
-        task_num = int(task_num_str) - 1
-        if 0 <= task_num < len(tasks):
-            new_status = input("Enter the new status (e.g., In Progress, Completed): ").strip()
-            if not new_status:
-                print("Status cannot be empty.")
-                return
-            data[project_name]['tasks'][task_num]['status'] = new_status
-            save_data(data)
-            print("Task status updated successfully.")
-        else:
-            print("Invalid task number.")
-    except ValueError:
-        print("Invalid input. Please enter a number.")
-
-def main():
-    """
-    Main function to run the project tracking application.
-    """
-    projects_data = load_data()
-
-    while True:
-        display_menu()
-        choice = input("Enter your choice (1-5): ")
-
-        if choice == '1':
-            view_projects(projects_data)
-        elif choice == '2':
-            add_project(projects_data)
-        elif choice == '3':
-            add_task(projects_data)
-        elif choice == '4':
-            update_task_status(projects_data)
-        elif choice == '5':
-            print("Exiting Project Tracker. Goodbye!")
-            break
-        else:
-            print("Invalid choice. Please enter a number between 1 and 5.")
-
-if __name__ == '__main__':
-    main()
