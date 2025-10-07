@@ -20,12 +20,14 @@ st.markdown("This application reads data directly from a public Google Sheet and
 def load_data(sheet_url):
     """
     Takes a Google Sheet URL, converts it to a CSV export URL,
-    and returns the data as a Pandas DataFrame.
+    and returns the data as a Pandas DataFrame with cleaned column names.
     """
     try:
         # The URL is modified to point to a CSV export of the sheet.
         csv_url = sheet_url.replace("/edit?usp=sharing", "/export?format=csv")
         df = pd.read_csv(csv_url)
+        # Clean column names by stripping leading/trailing whitespace
+        df.columns = df.columns.str.strip()
         return df
     except Exception as e:
         # Display a user-friendly error message if the sheet can't be accessed.
