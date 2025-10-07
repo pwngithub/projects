@@ -13,9 +13,10 @@ st.set_page_config(
 # --- App Title and Description ---
 st.title("🚀 Project Performance Dashboard")
 st.markdown("An interactive dashboard to monitor project progress from a live Google Sheet.")
+st.info("ℹ️ This dashboard automatically refreshes data from the Google Sheet every 5 minutes.")
 
 # --- Data Loading Function ---
-@st.cache_data
+@st.cache_data(ttl=300) # The ttl argument tells Streamlit to expire the cache after 300 seconds (5 minutes)
 def load_data(sheet_url):
     """
     Takes a Google Sheet URL, converts it to a CSV export URL,
