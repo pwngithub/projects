@@ -18,23 +18,23 @@ st.image(logo_url_main)
 
 st.title("🚀 Project Performance Dashboard")
 st.markdown("An interactive dashboard to monitor project progress from a live Google Sheet.")
-st.info("ℹ️ This dashboard automatically refreshes every 5 minutes. You can also use the manual refresh button in the sidebar.")
+
 
 # --- Data Loading Function ---
 @st.cache_data(ttl=300) # The ttl argument tells Streamlit to expire the cache after 300 seconds (5 minutes)
 def load_data(sheet_url):
     """
     Takes a Google Sheet URL, converts it to a CSV export URL,
-    and returns the data as a Pandas DataFrame with cleaned column names.
+    and returns the data as a Pandas DataFrame and the current timestamp.
     """
     try:
         csv_url = sheet_url.replace("/edit?usp=sharing", "/export?format=csv")
         df = pd.read_csv(csv_url)
         df.columns = df.columns.str.strip()
-        return df
+        return df, datetime.now() # Return the dataframe and the time it was loaded
     except Exception as e:
         st.error(f"Failed to load data. Please ensure the Google Sheet is public. Error: {e}")
-        return None
+        return None, None
 
 # The public URL of your Google Sheet.
 GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/109p39EGYEikgbZT4kSW71_sXJNMM-4Tjjd5q-l9Tx_0/edit?usp=sharing"
@@ -70,7 +70,11 @@ def process_data(df):
     return kpi_summary
 
 # --- Main App Logic ---
-dataframe = load_data(GOOGLE_SHEET_URL)
+dataframe, load_time = load_data(GOOGLE_SHEET_URL)
+
+# --- Display Last Updated Time ---
+if load_time:
+    st.caption(f"Data last fetched from Google Sheets at: **{load_time.strftime('%I:%M:%S %p on %B %d, %Y')}**")
 
 if dataframe is not None:
     kpi_data = process_data(dataframe)
