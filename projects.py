@@ -71,7 +71,7 @@ def load_data_and_metadata(sheet_url):
         return None, None
 
 # The public URL of your Google Sheet.
-GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/109p39EGYEikgbZT4kSW71_sXJNMM-4Tjjd5q-l9Tx_0/edit?usp=sharing"
+GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/109p3BGYEikgbZT4kSW71_sXJNMM-4Tjjd5q-l9Tx_0/edit?usp=sharing"
 
 # --- Data Processing Function (No changes needed here) ---
 def process_data(df):
