@@ -137,47 +137,61 @@ if raw_dataframe is not None:
             col2.metric("Total As Built", f"{total_as_built:,.0f}")
             col3.metric("Left to be Built", f"{total_left:,.0f}")
             col4.metric("Overall Completion", f"{overall_completion:.2f}%")
-                
-            # --- Detailed KPI Section ---
-            st.header("🏗️ Completion by Project Type")
             
-            if not filtered_kpi_data.empty:
-                
-                # --- Completion Percentage Bar Chart ---
-                chart = alt.Chart(filtered_kpi_data).mark_bar(color='#4A90E2').encode(
-                    x=alt.X('Completion %:Q', title='Completion Percentage', scale=alt.Scale(domain=[0, 100])),
-                    y=alt.Y('Type:N', sort='-x', title='Project Type'),
-                    tooltip=['Type', 'Completion %', 'As Built', 'Design']
-                ).properties(
-                    title='Completion Percentage by Type'
-                )
-                
-                text = chart.mark_text(
-                    align='left',
-                    baseline='middle',
-                    dx=3  # Nudges text to right so it doesn't overlap bar
-                ).encode(
-                    text=alt.Text('Completion %:Q', format='.2f')
-                )
+            st.divider()
 
-                st.altair_chart(chart + text, use_container_width=True)
+            # --- Tabbed Navigation for Detailed Views ---
+            tab1, tab2 = st.tabs(["📊 KPI Overview", "📄 Detailed Breakdown"])
 
-                # Sort the data to match the chart order before displaying the cards
-                sorted_kpi_data = filtered_kpi_data.sort_values(by='Completion %', ascending=False)
+            with tab1:
+                st.header("Completion Percentage by Type")
+                if not filtered_kpi_data.empty:
+                    # --- Completion Percentage Bar Chart ---
+                    chart = alt.Chart(filtered_kpi_data).mark_bar(color='#4A90E2').encode(
+                        x=alt.X('Completion %:Q', title='Completion Percentage', scale=alt.Scale(domain=[0, 100])),
+                        y=alt.Y('Type:N', sort='-x', title='Project Type'),
+                        tooltip=['Type', 'Completion %', 'As Built', 'Design']
+                    ).properties(
+                        title='Completion Percentage by Type'
+                    )
+                    
+                    text = chart.mark_text(
+                        align='left',
+                        baseline='middle',
+                        dx=3  # Nudges text to right so it doesn't overlap bar
+                    ).encode(
+                        text=alt.Text('Completion %:Q', format='.2f')
+                    )
 
-                for index, row in sorted_kpi_data.iterrows():
-                    with st.container(border=True): # Using a container to create a "card"
-                        
-                        st.subheader(f'{row["Type"]}')
+                    st.altair_chart(chart + text, use_container_width=True)
+                else:
+                    st.info("No data to display for the selected project types.")
 
-                        st.progress(int(row['Completion %']))
-                        
-                        kpi_c1, kpi_c2, kpi_c3 = st.columns(3)
-                        kpi_c1.metric("Completion %", f"{row['Completion %']:.2f}%")
-                        kpi_c2.metric("As Built", f"{row['As Built']:,.2f}")
-                        kpi_c3.metric("Design Target", f"{row['Design']:,.2f}")
-            else:
-                st.info("No data to display for the selected project types.")
+            with tab2:
+                st.header("Detailed Breakdown by Project Type")
+                if not filtered_kpi_data.empty:
+                    # Sort the data to match the chart order before displaying the cards
+                    sorted_kpi_data = filtered_kpi_data.sort_values(by='Completion %', ascending=False)
+                    
+                    # Identify the top performer
+                    top_performer_type = sorted_kpi_data.iloc[0]['Type']
+
+                    for index, row in sorted_kpi_data.iterrows():
+                        with st.container(border=True):
+                            # Add a badge for the top performer
+                            if row['Type'] == top_performer_type:
+                                st.subheader(f'🏆 Top Performer: {row["Type"]}')
+                            else:
+                                st.subheader(f'{row["Type"]}')
+
+                            st.progress(int(row['Completion %']))
+                            
+                            kpi_c1, kpi_c2, kpi_c3 = st.columns(3)
+                            kpi_c1.metric("Completion %", f"{row['Completion %']:.2f}%")
+                            kpi_c2.metric("As Built", f"{row['As Built']:,.2f}")
+                            kpi_c3.metric("Design Target", f"{row['Design']:,.2f}")
+                else:
+                    st.info("No data to display for the selected project types.")
 
         # --- Raw Data Table ---
         with st.expander("🔍 View Raw Data Table"):
