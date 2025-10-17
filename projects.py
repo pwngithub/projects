@@ -132,81 +132,61 @@ if raw_dataframe is not None:
             total_left = filtered_kpi_data['Left to be Built'].sum()
             overall_completion = (total_as_built / total_design * 100) if total_design > 0 else 0
             
-            kpi_col1, kpi_col2 = st.columns([1, 2])
-            
-            with kpi_col1:
-                # --- Donut Chart for Overall Completion ---
-                source = pd.DataFrame({
-                    "category": ["Completed", "Remaining"],
-                    "value": [overall_completion, 100 - overall_completion]
-                })
-                
-                donut_chart = alt.Chart(source).mark_arc(innerRadius=50).encode(
-                    theta=alt.Theta(field="value", type="quantitative"),
-                    color=alt.Color(field="category", type="nominal", 
-                                    scale=alt.Scale(domain=['Completed', 'Remaining'],
-                                                    range=['#4A90E2', '#E0E0E0']),
-                                    legend=None)
-                ).properties(title="Overall Completion")
-
-                st.altair_chart(donut_chart, use_container_width=True)
-
-            with kpi_col2:
-                st.metric("Total Design", f"{total_design:,.0f}")
-                st.metric("Total As Built", f"{total_as_built:,.0f}")
-                st.metric("Left to be Built", f"{total_left:,.0f}")
-                
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric("Total Design", f"{total_design:,.0f}")
+            col2.metric("Total As Built", f"{total_as_built:,.0f}")
+            col3.metric("Left to be Built", f"{total_left:,.0f}")
+            col4.metric("Overall Completion", f"{overall_completion:.2f}%")
 
             # --- Detailed KPI Section ---
             st.header("🏗️ Completion by Project Type")
             
             if not filtered_kpi_data.empty:
                 
-                # --- Completion Percentage Bar Chart ---
-                chart = alt.Chart(filtered_kpi_data).mark_bar(color='#4A90E2').encode(
-                    x=alt.X('Completion %:Q', title='Completion Percentage', scale=alt.Scale(domain=[0, 100])),
-                    y=alt.Y('Type:N', sort='-x', title='Project Type'),
-                    tooltip=['Type', 'Completion %', 'As Built', 'Design']
-                ).properties(
-                    title='Completion Percentage by Type'
-                )
-                
-                text = chart.mark_text(
-                    align='left',
-                    baseline='middle',
-                    dx=3  # Nudges text to right so it doesn't overlap bar
-                ).encode(
-                    text=alt.Text('Completion %:Q', format='.2f')
-                )
+                chart_col, kpi_col = st.columns([2, 1]) # Allocate more space to the chart
 
-                st.altair_chart(chart + text, use_container_width=True)
+                with chart_col:
+                    # --- Completion Percentage Bar Chart ---
+                    chart = alt.Chart(filtered_kpi_data).mark_bar(color='#4A90E2').encode(
+                        x=alt.X('Completion %:Q', title='Completion Percentage', scale=alt.Scale(domain=[0, 100])),
+                        y=alt.Y('Type:N', sort='-x', title='Project Type'),
+                        tooltip=['Type', 'Completion %', 'As Built', 'Design']
+                    ).properties(
+                        title='Completion Percentage by Type'
+                    )
+                    
+                    text = chart.mark_text(
+                        align='left',
+                        baseline='middle',
+                        dx=3  # Nudges text to right so it doesn't overlap bar
+                    ).encode(
+                        text=alt.Text('Completion %:Q', format='.2f')
+                    )
 
-                # Sort the data to match the chart order before displaying the cards
-                sorted_kpi_data = filtered_kpi_data.sort_values(by='Completion %', ascending=False)
+                    st.altair_chart(chart + text, use_container_width=True)
 
-                for index, row in sorted_kpi_data.iterrows():
-                    with st.container(border=True): # Using a container to create a "card"
-                        
-                        # --- Color-Coded Status Header ---
-                        completion = row['Completion %']
-                        if completion > 85:
-                            status_color = "green"
-                            status_text = "On Track"
-                        elif completion > 50:
-                            status_color = "orange"
-                            status_text = "In Progress"
-                        else:
-                            status_color = "red"
-                            status_text = "At Risk"
+                with kpi_col:
+                    # FIX: Sort the data to match the chart order before displaying the cards
+                    sorted_kpi_data = filtered_kpi_data.sort_values(by='Completion %', ascending=False)
 
-                        st.markdown(f'<h4>{row["Type"]} <span style="color:{status_color}; font-size: 0.8em;">({status_text})</span></h4>', unsafe_allow_html=True)
-
-                        st.progress(int(row['Completion %']))
-                        
-                        kpi_c1, kpi_c2, kpi_c3 = st.columns(3)
-                        kpi_c1.metric("Completion %", f"{row['Completion %']:.2f}%")
-                        kpi_c2.metric("As Built", f"{row['As Built']:,.2f}")
-                        kpi_c3.metric("Design Target", f"{row['Design']:,.2f}")
+                    for index, row in sorted_kpi_data.iterrows():
+                        with st.container(border=True): # Using a container to create a "card"
+                            
+                            # --- Visual Status Indicator Bar ---
+                            completion = row['Completion %']
+                            if completion > 85:
+                                color = "#4CAF50" # Green
+                            elif completion > 50:
+                                color = "#FFC107" # Yellow
+                            else:
+                                color = "#F44336" # Red
+                            
+                            st.markdown(f'<hr style="height:5px;border:none;color:{color};background-color:{color};" />', unsafe_allow_html=True)
+                            st.subheader(f"{row['Type']}")
+                            
+                            kpi_c1, kpi_c2 = st.columns(2)
+                            kpi_c1.metric("Completion", f"{row['Completion %']:.2f}%")
+                            kpi_c2.metric("Left to Build", f"{row['Left to be Built']:,.0f}")
             else:
                 st.info("No data to display for the selected project types.")
 
