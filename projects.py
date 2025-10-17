@@ -2,78 +2,44 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 from datetime import datetime
-import gspread
-from google.oauth2.service_account import Credentials
-from googleapiclient.discovery import build
-import pytz
 
 # --- Page Configuration ---
+# Set the page title and a descriptive icon for the browser tab.
 st.set_page_config(
     page_title="Project Dashboard",
     page_icon="🚀",
-    layout="wide"
+    layout="wide" # Use the full page width for a better view of the data.
 )
 
 # --- Logo and App Title ---
+# Replace the URL below with the actual URL of your PBB logo
 logo_url_main = "https://images.squarespace-cdn.com/content/v1/651eb4433b13e72c1034f375/369c5df0-5363-4827-b041-1add0367f447/PBB+long+logo.png?format=1500w" 
 st.image(logo_url_main)
 
 st.title("🚀 Project Performance Dashboard")
 st.markdown("An interactive dashboard to monitor project progress from a live Google Sheet.")
+st.info("ℹ️ This dashboard automatically refreshes every 5 minutes. You can also use the manual refresh button in the sidebar.")
 
-
-# --- Data Loading Function (Now uses Google Sheets API) ---
-@st.cache_data(ttl=300)
-def load_data_and_metadata(sheet_url):
+# --- Data Loading Function ---
+@st.cache_data(ttl=300) # The ttl argument tells Streamlit to expire the cache after 300 seconds (5 minutes)
+def load_data(sheet_url):
     """
-    Connects to Google Sheets and Drive APIs using service account credentials
-    to fetch both the sheet data and its last modified timestamp.
+    Takes a Google Sheet URL, converts it to a CSV export URL,
+    and returns the data as a Pandas DataFrame with cleaned column names.
     """
     try:
-        # Define the scopes required for read-only access
-        scopes = [
-            'https://www.googleapis.com/auth/spreadsheets.readonly',
-            'https://www.googleapis.com/auth/drive.readonly'
-        ]
-        # Authenticate using the credentials stored in Streamlit secrets
-        creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
-        
-        # Authorize gspread client for Sheets API
-        sheets_client = gspread.authorize(creds)
-        # Build a service object for Drive API
-        drive_service = build('drive', 'v3', credentials=creds)
-
-        # --- Get sheet data using gspread ---
-        spreadsheet = sheets_client.open_by_url(sheet_url)
-        sheet = spreadsheet.sheet1
-        records = sheet.get_all_records()
-        df = pd.DataFrame(records)
+        csv_url = sheet_url.replace("/edit?usp=sharing", "/export?format=csv")
+        df = pd.read_csv(csv_url)
         df.columns = df.columns.str.strip()
-
-        # --- Get sheet metadata (last modified time) using Drive API ---
-        file_id = spreadsheet.id
-        file_metadata = drive_service.files().get(fileId=file_id, fields='modifiedTime').execute()
-        modified_time_utc_str = file_metadata['modifiedTime']
-        
-        # Parse the UTC time and convert to a desired timezone (e.g., US/Eastern)
-        utc_time = datetime.fromisoformat(modified_time_utc_str.replace('Z', '+00:00'))
-        eastern_tz = pytz.timezone('US/Eastern')
-        local_modified_time = utc_time.astimezone(eastern_tz)
-
-        return df, local_modified_time
-
-    except gspread.exceptions.SpreadsheetNotFound:
-        st.error("Spreadsheet not found. Please check the URL and ensure it's shared with the service account email.")
-        return None, None
+        return df
     except Exception as e:
-        st.error(f"An error occurred while fetching data from Google API: {e}")
-        st.info("Please ensure your Google Sheet is shared and Streamlit secrets are configured correctly as per the instructions.")
-        return None, None
+        st.error(f"Failed to load data. Please ensure the Google Sheet is public. Error: {e}")
+        return None
 
 # The public URL of your Google Sheet.
-GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/109p3BGYEikgbZT4kSW71_sXJNMM-4Tjjd5q-l9Tx_0/edit?usp=sharing"
+GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/109p39EGYEikgbZT4kSW71_sXJNMM-4Tjjd5q-l9Tx_0/edit?usp=sharing"
 
-# --- Data Processing Function (No changes needed here) ---
+# --- Data Processing Function ---
 def process_data(df):
     """Cleans and processes the dataframe for KPI calculations."""
     df_processed = df.copy()
@@ -87,10 +53,8 @@ def process_data(df):
     df_processed['Type'] = df_processed['Type'].astype(str).str.replace(':', '', regex=False).str.strip().str.title()
     
     for col in ['Design', 'As Built']:
-        # Ensure column exists before trying to process it
-        if col in df_processed.columns:
-            df_processed[col] = df_processed[col].astype(str).str.replace(',', '', regex=False)
-            df_processed[col] = pd.to_numeric(df_processed[col], errors='coerce').fillna(0)
+        df_processed[col] = df_processed[col].astype(str).str.replace(',', '', regex=False)
+        df_processed[col] = pd.to_numeric(df_processed[col], errors='coerce').fillna(0)
     
     kpi_summary = df_processed.groupby('Type').agg({
         'Design': 'sum',
@@ -106,11 +70,7 @@ def process_data(df):
     return kpi_summary
 
 # --- Main App Logic ---
-dataframe, last_updated_time = load_data_and_metadata(GOOGLE_SHEET_URL)
-
-# --- Display Last Updated Time ---
-if last_updated_time:
-    st.caption(f"Google Sheet last updated at: **{last_updated_time.strftime('%I:%M:%S %p on %B %d, %Y')} (Eastern Time)**")
+dataframe = load_data(GOOGLE_SHEET_URL)
 
 if dataframe is not None:
     kpi_data = process_data(dataframe)
@@ -119,9 +79,10 @@ if dataframe is not None:
         # --- Sidebar ---
         st.sidebar.header("Controls & Filters")
         
+        # Add a manual refresh button
         if st.sidebar.button("🔄 Refresh Data"):
-            st.cache_data.clear()
-            st.rerun()
+            load_data.clear() # Clear the cached data
+            st.rerun() # Rerun the app from the top
             
         st.sidebar.header("Filter Options")
         all_types = sorted(kpi_data['Type'].unique())
@@ -150,19 +111,33 @@ if dataframe is not None:
         st.header("🏗️ Completion by Project Type")
         
         if not filtered_kpi_data.empty:
+            # --- Completion Percentage Bar Chart ---
             chart = alt.Chart(filtered_kpi_data).mark_bar().encode(
                 x=alt.X('Completion %:Q', title='Completion Percentage', scale=alt.Scale(domain=[0, 100])),
                 y=alt.Y('Type:N', sort='-x', title='Project Type'),
                 tooltip=['Type', 'Completion %', 'As Built', 'Design']
-            ).properties(title='Completion Percentage by Type')
+            ).properties(
+                title='Completion Percentage by Type'
+            )
             
-            text = chart.mark_text(align='left', baseline='middle', dx=3).encode(text=alt.Text('Completion %:Q', format='.2f'))
+            text = chart.mark_text(
+                align='left',
+                baseline='middle',
+                dx=3  # Nudges text to right so it doesn't overlap bar
+            ).encode(
+                text=alt.Text('Completion %:Q', format='.2f')
+            )
+
             st.altair_chart(chart + text, use_container_width=True)
 
+
             for index, row in filtered_kpi_data.iterrows():
-                with st.container(border=True):
+                with st.container(border=True): # Using a container to create a "card"
                     st.subheader(f"{row['Type']}")
+                    
+                    # Add a progress bar for a quick visual cue
                     st.progress(int(row['Completion %']))
+
                     kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
                     kpi_col1.metric("Completion", f"{row['Completion %']:.2f}%")
                     kpi_col2.metric("As Built", f"{row['As Built']:,.2f}")
@@ -172,9 +147,9 @@ if dataframe is not None:
 
     # --- Raw Data Table ---
     with st.expander("🔍 View Raw Data Table"):
-        columns_to_show = [col for col in dataframe.columns if str(col).strip() and not str(col).startswith('Unnamed')]
+        columns_to_show = [col for col in dataframe.columns if not col.startswith('Unnamed')]
         display_df = dataframe[columns_to_show]
         st.dataframe(display_df)
 else:
-    st.warning("Could not load data from Google Sheets.")
+    st.warning("Could not display data. Please check the sheet's sharing settings and the URL.")
 
