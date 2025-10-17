@@ -176,7 +176,8 @@ if raw_dataframe is not None:
             # Ensure the dataframe used here is the one with the correct headers
             columns_to_show = [col for col in dataframe.columns if col is not None and not str(col).startswith('Unnamed')]
             display_df = dataframe[columns_to_show]
-            st.dataframe(display_df)
+            # FIX: Replace NaN (empty) values with empty strings to prevent serialization error
+            st.dataframe(display_df.fillna(''))
 else:
     st.warning("Could not display data. Please check the sheet's sharing settings and the URL.")
 
