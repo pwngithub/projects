@@ -52,6 +52,9 @@ def process_data(df):
     df_processed.dropna(subset=['Type'], inplace=True)
     df_processed['Type'] = df_processed['Type'].astype(str).str.replace(':', '', regex=False).str.strip().str.title()
     
+    # FIX: Filter out any rows that are likely metadata, like "Last Edited"
+    df_processed = df_processed[~df_processed['Type'].str.contains("Last Edited", case=False, na=False)]
+
     for col in ['Design', 'As Built']:
         df_processed[col] = df_processed[col].astype(str).str.replace(',', '', regex=False)
         df_processed[col] = pd.to_numeric(df_processed[col], errors='coerce').fillna(0)
@@ -90,14 +93,11 @@ if raw_dataframe is not None:
         # Create a new dataframe for the main data using the found header row
         dataframe = raw_dataframe.copy()
         
-        # FIX: Clean the header row itself before assigning it as columns
-        # This prevents NaN values (from empty cells) from becoming column names, which causes the JSON error.
         header_series = dataframe.iloc[header_row_index].fillna('Unnamed Column')
         dataframe.columns = header_series
         
         dataframe = dataframe.iloc[header_row_index + 1:].reset_index(drop=True)
         
-        # FIX: Remove duplicate columns by keeping the first occurrence
         dataframe = dataframe.loc[:, ~dataframe.columns.duplicated()]
         
     except (IndexError, KeyError):
@@ -163,7 +163,10 @@ if raw_dataframe is not None:
 
                 st.altair_chart(chart + text, use_container_width=True)
 
-                for index, row in filtered_kpi_data.iterrows():
+                # FIX: Sort the data to match the chart order before displaying the cards
+                sorted_kpi_data = filtered_kpi_data.sort_values(by='Completion %', ascending=False)
+
+                for index, row in sorted_kpi_data.iterrows():
                     with st.container(border=True): # Using a container to create a "card"
                         st.subheader(f"{row['Type']}")
                         
@@ -178,10 +181,8 @@ if raw_dataframe is not None:
 
         # --- Raw Data Table ---
         with st.expander("🔍 View Raw Data Table"):
-            # Ensure the dataframe used here is the one with the correct headers
             columns_to_show = [col for col in dataframe.columns if col is not None and not str(col).startswith('Unnamed')]
             display_df = dataframe[columns_to_show]
-            # FIX: Replace NaN (empty) values with empty strings to prevent serialization error
             st.dataframe(display_df.fillna(''))
 else:
     st.warning("Could not display data. Please check the sheet's sharing settings and the URL.")
