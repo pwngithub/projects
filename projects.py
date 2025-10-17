@@ -89,7 +89,12 @@ if raw_dataframe is not None:
         
         # Create a new dataframe for the main data using the found header row
         dataframe = raw_dataframe.copy()
-        dataframe.columns = dataframe.iloc[header_row_index]
+        
+        # FIX: Clean the header row itself before assigning it as columns
+        # This prevents NaN values (from empty cells) from becoming column names, which causes the JSON error.
+        header_series = dataframe.iloc[header_row_index].fillna('Unnamed Column')
+        dataframe.columns = header_series
+        
         dataframe = dataframe.iloc[header_row_index + 1:].reset_index(drop=True)
         
         # FIX: Remove duplicate columns by keeping the first occurrence
