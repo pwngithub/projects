@@ -24,9 +24,9 @@ st.title("🚀 Project Performance Dashboard")
 # and look at the URL in your browser. The GID is the number after "#gid=".
 SHEET_ID = "109p39EGYEikgbZT4kSW71_sXJNMM-4Tjjd5q-l9Tx_0"
 SHEET_GIDS = {
-    "RDOF": "0",  # The first sheet is usually gid=0
-    "Smyrna": "YOUR_GID_HERE", # Replace with the actual GID for your second sheet
-    # Add more sheets as you create them in your Google Sheet
+    "RDOF": "0",
+    "Smyrna": "YOUR_GID_HERE", # Replace with the GID from the "Smyrna" sheet's URL
+    "Another project": "YOUR_GID_HERE"  # Replace with the GID from the "Another project" sheet's URL
 }
 
 
