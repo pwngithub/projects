@@ -24,9 +24,9 @@ st.title("🚀 Project Performance Dashboard")
 # and look at the URL in your browser. The GID is the number after "#gid=".
 SHEET_ID = "109p39EGYEikgbZT4kSW71_sXJNMM-4Tjjd5q-l9Tx_0"
 SHEET_GIDS = {
-    "Sheet1": "0",  # The first sheet is usually gid=0
-    "Sheet2": "YOUR_GID_HERE", # Replace with the actual GID for your second sheet
-    "Another Project": "ANOTHER_GID_HERE" # Add more sheets as needed
+    "RDOF": "0",  # The first sheet is usually gid=0
+    "Smyrna": "YOUR_GID_HERE", # Replace with the actual GID for your second sheet
+    # Add more sheets as you create them in your Google Sheet
 }
 
 
@@ -215,5 +215,4 @@ if raw_dataframe is not None:
                 st.dataframe(display_df.fillna(''))
 else:
     st.warning("Could not display data. Please check the sheet's sharing settings and the URL.")
-
 
