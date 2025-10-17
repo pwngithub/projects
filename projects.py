@@ -142,60 +142,46 @@ if raw_dataframe is not None:
             st.header("🏗️ Completion by Project Type")
             
             if not filtered_kpi_data.empty:
+                # --- Completion Percentage Bar Chart ---
+                chart = alt.Chart(filtered_kpi_data).mark_bar().encode(
+                    x=alt.X('Completion %:Q', title='Completion Percentage', scale=alt.Scale(domain=[0, 100])),
+                    y=alt.Y('Type:N', sort='-x', title='Project Type'),
+                    tooltip=['Type', 'Completion %', 'As Built', 'Design']
+                ).properties(
+                    title='Completion Percentage by Type'
+                )
                 
-                chart_col, kpi_col = st.columns([2, 1]) # Allocate more space to the chart
+                text = chart.mark_text(
+                    align='left',
+                    baseline='middle',
+                    dx=3  # Nudges text to right so it doesn't overlap bar
+                ).encode(
+                    text=alt.Text('Completion %:Q', format='.2f')
+                )
 
-                with chart_col:
-                    # --- Completion Percentage Bar Chart ---
-                    chart = alt.Chart(filtered_kpi_data).mark_bar(color='#4A90E2').encode(
-                        x=alt.X('Completion %:Q', title='Completion Percentage', scale=alt.Scale(domain=[0, 100])),
-                        y=alt.Y('Type:N', sort='-x', title='Project Type'),
-                        tooltip=['Type', 'Completion %', 'As Built', 'Design']
-                    ).properties(
-                        title='Completion Percentage by Type'
-                    )
-                    
-                    text = chart.mark_text(
-                        align='left',
-                        baseline='middle',
-                        dx=3  # Nudges text to right so it doesn't overlap bar
-                    ).encode(
-                        text=alt.Text('Completion %:Q', format='.2f')
-                    )
+                st.altair_chart(chart + text, use_container_width=True)
 
-                    st.altair_chart(chart + text, use_container_width=True)
+                # FIX: Sort the data to match the chart order before displaying the cards
+                sorted_kpi_data = filtered_kpi_data.sort_values(by='Completion %', ascending=False)
 
-                with kpi_col:
-                    # FIX: Sort the data to match the chart order before displaying the cards
-                    sorted_kpi_data = filtered_kpi_data.sort_values(by='Completion %', ascending=False)
+                for index, row in sorted_kpi_data.iterrows():
+                    with st.container(border=True): # Using a container to create a "card"
+                        st.subheader(f"{row['Type']}")
+                        
+                        st.progress(int(row['Completion %']))
 
-                    for index, row in sorted_kpi_data.iterrows():
-                        with st.container(border=True): # Using a container to create a "card"
-                            
-                            # --- Visual Status Indicator Bar ---
-                            completion = row['Completion %']
-                            if completion > 85:
-                                color = "#4CAF50" # Green
-                            elif completion > 50:
-                                color = "#FFC107" # Yellow
-                            else:
-                                color = "#F44336" # Red
-                            
-                            st.markdown(f'<hr style="height:5px;border:none;color:{color};background-color:{color};" />', unsafe_allow_html=True)
-                            st.subheader(f"{row['Type']}")
-                            
-                            kpi_c1, kpi_c2 = st.columns(2)
-                            kpi_c1.metric("Completion", f"{row['Completion %']:.2f}%")
-                            kpi_c2.metric("Left to Build", f"{row['Left to be Built']:,.0f}")
+                        kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
+                        kpi_col1.metric("Completion", f"{row['Completion %']:.2f}%")
+                        kpi_col2.metric("As Built", f"{row['As Built']:,.2f}")
+                        kpi_col3.metric("Left to be Built", f"{row['Left to be Built']:,.2f}")
             else:
                 st.info("No data to display for the selected project types.")
 
         # --- Raw Data Table ---
         with st.expander("🔍 View Raw Data Table"):
-            if dataframe is not None:
-                columns_to_show = [col for col in dataframe.columns if col is not None and not str(col).startswith('Unnamed')]
-                display_df = dataframe[columns_to_show]
-                st.dataframe(display_df.fillna(''))
+            columns_to_show = [col for col in dataframe.columns if col is not None and not str(col).startswith('Unnamed')]
+            display_df = dataframe[columns_to_show]
+            st.dataframe(display_df.fillna(''))
 else:
     st.warning("Could not display data. Please check the sheet's sharing settings and the URL.")
 
