@@ -25,7 +25,7 @@ st.title("🚀 Project Performance Dashboard")
 SHEET_ID = "109p39EGYEikgbZT4kSW71_sXJNMM-4Tjjd5q-l9Tx_0"
 SHEET_GIDS = {
     "RDOF": "0",
-    "Smyrna": "YOUR_GID_HERE", # Replace with the GID from the "Smyrna" sheet's URL
+    "Smyrna": "1554796254", # GID has been updated
     "Another project": "YOUR_GID_HERE"  # Replace with the GID from the "Another project" sheet's URL
 }
 
