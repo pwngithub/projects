@@ -92,6 +92,9 @@ if raw_dataframe is not None:
         dataframe.columns = dataframe.iloc[header_row_index]
         dataframe = dataframe.iloc[header_row_index + 1:].reset_index(drop=True)
         
+        # FIX: Remove duplicate columns by keeping the first occurrence
+        dataframe = dataframe.loc[:, ~dataframe.columns.duplicated()]
+        
     except (IndexError, KeyError):
         st.error("Could not find the header row in the Google Sheet. Please ensure a column is named 'Type'.")
         dataframe = None # Set dataframe to None so the rest of the app doesn't run
