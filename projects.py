@@ -18,24 +18,34 @@ st.image(logo_url_main)
 
 st.title("🚀 Project Performance Dashboard")
 
+# --- Google Sheet Configuration ---
+# IMPORTANT: Manually add your sheet names and their GID here.
+# To find the GID: Open your Google Sheet, click on the desired sheet tab,
+# and look at the URL in your browser. The GID is the number after "#gid=".
+SHEET_ID = "109p39EGYEikgbZT4kSW71_sXJNMM-4Tjjd5q-l9Tx_0"
+SHEET_GIDS = {
+    "Sheet1": "0",  # The first sheet is usually gid=0
+    "Sheet2": "YOUR_GID_HERE", # Replace with the actual GID for your second sheet
+    "Another Project": "ANOTHER_GID_HERE" # Add more sheets as needed
+}
+
+
 # --- Data Loading Function ---
 @st.cache_data(ttl=300) # The ttl argument tells Streamlit to expire the cache after 300 seconds (5 minutes)
-def load_data(sheet_url):
+def load_data(sheet_id, gid):
     """
-    Takes a Google Sheet URL, converts it to a CSV export URL,
+    Takes a Google Sheet ID and GID, constructs the CSV export URL,
     and returns the data as a raw Pandas DataFrame without headers.
     """
     try:
-        csv_url = sheet_url.replace("/edit?usp=sharing", "/export?format=csv")
+        # Construct the URL for the specific sheet
+        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
         # Load the data without assuming a header row to find metadata
-        df = pd.read_csv(csv_url, header=None)
+        df = pd.read_csv(url, header=None)
         return df
     except Exception as e:
-        st.error(f"Failed to load data. Please ensure the Google Sheet is public. Error: {e}")
+        st.error(f"Failed to load data for the selected sheet. Error: {e}")
         return None
-
-# The public URL of your Google Sheet.
-GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/109p39EGYEikgbZT4kSW71_sXJNMM-4Tjjd5q-l9Tx_0/edit?usp=sharing"
 
 # --- Data Processing Function ---
 def process_data(df):
@@ -72,8 +82,19 @@ def process_data(df):
     
     return kpi_summary
 
+# --- Sidebar Controls ---
+st.sidebar.header("Controls & Filters")
+
+# Add a dropdown to select the sheet
+selected_sheet_name = st.sidebar.selectbox("Select Project Sheet:", options=list(SHEET_GIDS.keys()))
+selected_gid = SHEET_GIDS[selected_sheet_name]
+
+if st.sidebar.button("🔄 Refresh Data"):
+    load_data.clear()
+    st.rerun()
+
 # --- Main App Logic ---
-raw_dataframe = load_data(GOOGLE_SHEET_URL)
+raw_dataframe = load_data(SHEET_ID, selected_gid)
 
 if raw_dataframe is not None:
     # --- Extract metadata and prepare the main dataframe ---
@@ -83,8 +104,6 @@ if raw_dataframe is not None:
         st.markdown(f"**Sheet Last Updated:** {last_updated_string}")
     except (IndexError, KeyError):
         st.warning("Could not find the 'Last Updated' time in cell A7.")
-        # Fallback text if cell A7 is not found
-        st.markdown("An interactive dashboard to monitor project progress from a live Google Sheet.")
         
     try:
         # Find the header row by looking for the 'Type' column header in the first column
@@ -108,25 +127,20 @@ if raw_dataframe is not None:
         kpi_data = process_data(dataframe)
         
         if kpi_data is not None:
-            # --- Sidebar ---
-            st.sidebar.header("Controls & Filters")
-            
-            if st.sidebar.button("🔄 Refresh Data"):
-                load_data.clear()
-                st.rerun()
-                
+            # --- Filter Options specific to the selected sheet ---
             st.sidebar.header("Filter Options")
             all_types = sorted(kpi_data['Type'].unique())
             selected_types = st.sidebar.multiselect(
                 "Select Project Type(s):",
                 options=all_types,
-                default=all_types
+                default=all_types,
+                key=f"multiselect_{selected_gid}" # Unique key to prevent state issues
             )
             
             filtered_kpi_data = kpi_data[kpi_data['Type'].isin(selected_types)]
 
             # --- High-Level KPIs ---
-            st.header("📊 Overall Project Health")
+            st.header(f"📊 Overall Project Health: {selected_sheet_name}")
             total_design = filtered_kpi_data['Design'].sum()
             total_as_built = filtered_kpi_data['As Built'].sum()
             total_left = filtered_kpi_data['Left to be Built'].sum()
@@ -201,4 +215,5 @@ if raw_dataframe is not None:
                 st.dataframe(display_df.fillna(''))
 else:
     st.warning("Could not display data. Please check the sheet's sharing settings and the URL.")
+
 
