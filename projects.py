@@ -132,11 +132,30 @@ if raw_dataframe is not None:
             total_left = filtered_kpi_data['Left to be Built'].sum()
             overall_completion = (total_as_built / total_design * 100) if total_design > 0 else 0
             
-            col1, col2, col3, col4 = st.columns(4)
-            col1.metric("Total Design", f"{total_design:,.0f}")
-            col2.metric("Total As Built", f"{total_as_built:,.0f}")
-            col3.metric("Left to be Built", f"{total_left:,.0f}")
-            col4.metric("Overall Completion", f"{overall_completion:.2f}%")
+            kpi_col1, kpi_col2 = st.columns([1, 2])
+            
+            with kpi_col1:
+                # --- Donut Chart for Overall Completion ---
+                source = pd.DataFrame({
+                    "category": ["Completed", "Remaining"],
+                    "value": [overall_completion, 100 - overall_completion]
+                })
+                
+                donut_chart = alt.Chart(source).mark_arc(innerRadius=50).encode(
+                    theta=alt.Theta(field="value", type="quantitative"),
+                    color=alt.Color(field="category", type="nominal", 
+                                    scale=alt.Scale(domain=['Completed', 'Remaining'],
+                                                    range=['#4A90E2', '#E0E0E0']),
+                                    legend=None)
+                ).properties(title="Overall Completion")
+
+                st.altair_chart(donut_chart, use_container_width=True)
+
+            with kpi_col2:
+                st.metric("Total Design", f"{total_design:,.0f}")
+                st.metric("Total As Built", f"{total_as_built:,.0f}")
+                st.metric("Left to be Built", f"{total_left:,.0f}")
+                
 
             # --- Detailed KPI Section ---
             st.header("🏗️ Completion by Project Type")
@@ -167,13 +186,27 @@ if raw_dataframe is not None:
 
                 for index, row in sorted_kpi_data.iterrows():
                     with st.container(border=True): # Using a container to create a "card"
-                        st.subheader(f"{row['Type']}")
+                        
+                        # --- Color-Coded Status Header ---
+                        completion = row['Completion %']
+                        if completion > 85:
+                            status_color = "green"
+                            status_text = "On Track"
+                        elif completion > 50:
+                            status_color = "orange"
+                            status_text = "In Progress"
+                        else:
+                            status_color = "red"
+                            status_text = "At Risk"
+
+                        st.markdown(f'<h4>{row["Type"]} <span style="color:{status_color}; font-size: 0.8em;">({status_text})</span></h4>', unsafe_allow_html=True)
+
                         st.progress(int(row['Completion %']))
                         
                         kpi_c1, kpi_c2, kpi_c3 = st.columns(3)
                         kpi_c1.metric("Completion %", f"{row['Completion %']:.2f}%")
                         kpi_c2.metric("As Built", f"{row['As Built']:,.2f}")
-                        kpi_c3.metric("Left to Build", f"{row['Left to be Built']:,.2f}")
+                        kpi_c3.metric("Design Target", f"{row['Design']:,.2f}")
             else:
                 st.info("No data to display for the selected project types.")
 
