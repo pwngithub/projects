@@ -104,8 +104,6 @@ if raw_dataframe is not None:
         st.error("Could not find the header row in the Google Sheet. Please ensure a column is named 'Type'.")
         dataframe = None # Set dataframe to None so the rest of the app doesn't run
         
-    st.info("ℹ️ This dashboard automatically refreshes every 5 minutes. You can also use the manual refresh button in the sidebar.")
-
     if dataframe is not None:
         kpi_data = process_data(dataframe)
         
